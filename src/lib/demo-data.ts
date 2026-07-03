@@ -1,4 +1,4 @@
-export const PLATFORMS = ["Instagram", "Facebook", "LinkedIn", "YouTube"] as const;
+export const PLATFORMS = ["Instagram", "Facebook", "LinkedIn", "YouTube", "TikTok"] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
 export const ROLES = [
@@ -194,6 +194,7 @@ export const PLATFORM_COLOR: Record<Platform, string> = {
   Facebook: "#2563EB",
   LinkedIn: "#0A66C2",
   YouTube: "#EF4444",
+  TikTok: "#000000",
 };
 
 export const REVENUE_BY_MONTH = [

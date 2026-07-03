@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { AppShell } from "@/components/app-shell";
-import { usePosts, useCurrentWorkspace, useUpdatePostDetails, useCreatePost, uploadMediaFile, Post } from "@/lib/queries";
-import { Loader2, UploadCloud, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
+import { usePosts, useCurrentWorkspace, useUpdatePostDetails, useCreatePost, useUpdatePostStatus, useDeletePost, uploadMediaFile, Post, useClients, Client, useWorkspaceMembers } from "@/lib/queries";
+import { Loader2, UploadCloud, Link as LinkIcon, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { PLATFORM_COLOR } from "@/lib/demo-data";
+import { PLATFORM_COLOR, PLATFORMS } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/tasks")({
   head: () => ({ meta: [{ title: "Tasks & Content Sheet — SocialNxt" }] }),
@@ -16,8 +17,12 @@ export const Route = createFileRoute("/tasks")({
 
 function TasksPage() {
   const { data: workspace } = useCurrentWorkspace();
-  const { data: posts = [], isLoading } = usePosts(workspace?.workspaceId);
+  const { data: posts = [], isLoading: isLoadingPosts } = usePosts(workspace?.workspaceId);
+  const { data: clients = [], isLoading: isLoadingClients } = useClients(workspace?.workspaceId);
+  const { data: members = [], isLoading: isLoadingMembers } = useWorkspaceMembers(workspace?.workspaceId);
   const createPost = useCreatePost();
+  
+  const isLoading = isLoadingPosts || isLoadingClients || isLoadingMembers;
 
   const handleAddRow = () => {
     if (!workspace) return;
@@ -38,21 +43,106 @@ function TasksPage() {
     });
   };
 
-  const sortedPosts = [...posts].sort((a, b) => {
-    const dateA = a.scheduled_for ? new Date(a.scheduled_for).getTime() : new Date(a.created_at).getTime();
-    const dateB = b.scheduled_for ? new Date(b.scheduled_for).getTime() : new Date(b.created_at).getTime();
-    return dateA - dateB;
-  });
+  const isClient = workspace?.role === "client";
+  const clientNameForFilter = workspace?.userFullName || workspace?.userEmail?.split("@")[0] || "";
+
+  const [selectedClientFilter, setSelectedClientFilter] = useState<string>("All Clients");
+  const [selectedPlatformFilter, setSelectedPlatformFilter] = useState<string>("All Platforms");
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>("All Dates");
+
+  const sortedPosts = [...posts]
+    .filter((p) => {
+      // Client filter
+      if (isClient) {
+        if (p.client_name?.toLowerCase() !== clientNameForFilter.toLowerCase()) return false;
+      } else if (selectedClientFilter !== "All Clients") {
+        if (p.client_name !== selectedClientFilter) return false;
+      }
+
+      // Platform filter
+      if (selectedPlatformFilter !== "All Platforms") {
+        if (p.platform !== selectedPlatformFilter) return false;
+      }
+
+      // Date filter
+      if (selectedDateFilter !== "All Dates") {
+        const postDate = p.scheduled_for ? new Date(p.scheduled_for) : new Date(p.created_at);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const postDay = new Date(postDate.getFullYear(), postDate.getMonth(), postDate.getDate());
+        
+        if (selectedDateFilter === "Today") {
+          if (postDay.getTime() !== today.getTime()) return false;
+        } else if (selectedDateFilter === "This Week") {
+          const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          if (postDay < today || postDay > nextWeek) return false;
+        } else if (selectedDateFilter === "This Month") {
+          if (postDate.getMonth() !== now.getMonth() || postDate.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const dateA = a.scheduled_for ? new Date(a.scheduled_for).getTime() : new Date(a.created_at).getTime();
+      const dateB = b.scheduled_for ? new Date(b.scheduled_for).getTime() : new Date(b.created_at).getTime();
+      return dateA - dateB;
+    });
 
   return (
     <AppShell
       title="Content Sheet"
       subtitle="Spreadsheet view for managing content topics, references, and final deliverables."
       actions={
-        <Button onClick={handleAddRow} disabled={!workspace}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Row
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-32 sm:w-40">
+            <Select value={selectedDateFilter} onValueChange={setSelectedDateFilter}>
+              <SelectTrigger className="h-10 rounded-xl bg-white border-input text-xs sm:text-sm">
+                <SelectValue placeholder="All Dates" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Dates">All Dates</SelectItem>
+                <SelectItem value="Today">Today</SelectItem>
+                <SelectItem value="This Week">This Week</SelectItem>
+                <SelectItem value="This Month">This Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-36 sm:w-44">
+            <Select value={selectedPlatformFilter} onValueChange={setSelectedPlatformFilter}>
+              <SelectTrigger className="h-10 rounded-xl bg-white border-input text-xs sm:text-sm">
+                <SelectValue placeholder="All Platforms" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Platforms">All Platforms</SelectItem>
+                {PLATFORMS.map(p => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {!isClient && (
+            <div className="w-36 sm:w-48">
+              <Select value={selectedClientFilter} onValueChange={setSelectedClientFilter}>
+                <SelectTrigger className="h-10 rounded-xl bg-white border-input text-xs sm:text-sm">
+                  <SelectValue placeholder="All Clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All Clients">All Clients</SelectItem>
+                  {clients.map(c => (
+                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {!isClient && (
+            <Button onClick={handleAddRow} disabled={!workspace} className="rounded-xl h-10">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Row
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="card-soft overflow-hidden">
@@ -60,27 +150,29 @@ function TasksPage() {
           <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse min-w-[1000px]">
+            <table className="w-full text-sm text-left border-collapse min-w-[1200px]">
               <thead className="bg-blue-600 text-white">
                 <tr>
                   <th className="px-4 py-3 border-r border-white/20 font-semibold w-24">DATE</th>
                   <th className="px-4 py-3 border-r border-white/20 font-semibold w-24">WEEK DAY</th>
-                  <th className="px-4 py-3 border-r border-white/20 font-semibold w-32">PLATFORM</th>
+                  <th className="px-4 py-3 border-r border-white/20 font-semibold min-w-[160px]">CLIENT</th>
+                  <th className="px-4 py-3 border-r border-white/20 font-semibold min-w-[140px]">PLATFORM</th>
                   <th className="px-4 py-3 border-r border-white/20 font-semibold w-32">CONTENT TYPE</th>
                   <th className="px-4 py-3 border-r border-white/20 font-semibold w-48">TOPIC</th>
                   <th className="px-4 py-3 border-r border-white/20 font-semibold w-64">REFERENCE CONTENT</th>
-                  <th className="px-4 py-3 border-r border-white/20 font-semibold">COMPLETED CONTENT</th>
+                  <th className="px-4 py-3 border-r border-white/20 font-semibold min-w-[200px]">COMPLETED CONTENT</th>
+                  <th className="px-4 py-3 border-r border-white/20 font-semibold w-40">ASSIGNED TO</th>
                   <th className="px-4 py-3 font-semibold w-32 text-center">STATUS</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedPosts.map((post, idx) => (
-                  <TaskRow key={post.id} post={post} index={idx} />
+                  <TaskRow key={post.id} post={post} index={idx} isClient={isClient} clients={clients} members={members} />
                 ))}
                 {sortedPosts.length === 0 && (
                   <tr>
                     <td colSpan={7} className="text-center py-10 text-muted-foreground">
-                      No posts found. Add content from the Calendar first!
+                      No posts found. Click 'Add Row' to draft new content!
                     </td>
                   </tr>
                 )}
@@ -94,8 +186,11 @@ function TasksPage() {
 }
 
 // Separate component for each row so they manage their own local edit state
-function TaskRow({ post, index }: { post: Post; index: number }) {
+function TaskRow({ post, index, isClient, clients, members }: { post: Post; index: number; isClient?: boolean; clients: Client[]; members: any[] }) {
+  const { data: workspace } = useCurrentWorkspace();
   const updatePost = useUpdatePostDetails();
+  const updateStatus = useUpdatePostStatus();
+  const deletePost = useDeletePost();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingTarget, setUploadingTarget] = useState<"reference_content" | "completed_work" | null>(null);
 
@@ -178,22 +273,37 @@ function TaskRow({ post, index }: { post: Post; index: number }) {
 
   return (
     <tr className={`border-b border-gray-200 ${rowColor} hover:bg-gray-50 transition-colors`}>
-      <td className="px-4 py-3 font-semibold text-gray-800 border-r border-gray-200 align-top">
+      <td className="p-0 border-r border-gray-200 align-top">
         <input 
           type="date"
           value={dateInputVal}
           onChange={handleDateChange}
-          className="bg-transparent border-none p-1 focus:ring-1 focus:ring-blue-500 rounded text-sm w-full cursor-pointer"
+          className="bg-transparent border-none px-3 py-3 focus:ring-1 focus:ring-blue-500 rounded-none text-sm w-full cursor-pointer"
         />
       </td>
-      <td className="px-4 py-3 font-medium text-gray-800 border-r border-gray-200 align-top pt-5">{weekdayStr}</td>
+      <td className="px-3 py-3 font-medium text-gray-800 border-r border-gray-200 align-top">{weekdayStr}</td>
       
+      {/* CLIENT */}
+      <td className="p-0 border-r border-gray-200 align-top bg-transparent">
+        <select
+          defaultValue={post.client_name || ""}
+          onChange={(e) => updatePost.mutate({ id: post.id, updates: { client_name: e.target.value } })}
+          disabled={isClient}
+          className="w-full px-3 py-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm cursor-pointer appearance-none disabled:opacity-50"
+        >
+          <option value="" disabled>Select Client</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.name}>{c.name}</option>
+          ))}
+        </select>
+      </td>
+
       {/* PLATFORM */}
       <td className="p-0 border-r border-gray-200 align-top bg-transparent">
         <select
           defaultValue={post.platform || ""}
           onChange={(e) => updatePost.mutate({ id: post.id, updates: { platform: e.target.value } })}
-          className="w-full h-full min-h-[80px] p-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm cursor-pointer appearance-none"
+          className="w-full px-3 py-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm cursor-pointer appearance-none"
         >
           <option value="" disabled>Select Platform</option>
           <option value="Instagram">Instagram</option>
@@ -209,7 +319,7 @@ function TaskRow({ post, index }: { post: Post; index: number }) {
         <textarea
           defaultValue={post.content_type || ""}
           onBlur={(e) => handleTextBlur("content_type", e.target.value)}
-          className="w-full h-full min-h-[80px] p-3 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+          className="w-full min-h-[80px] p-3 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
           placeholder="e.g. Reel"
         />
       </td>
@@ -219,7 +329,7 @@ function TaskRow({ post, index }: { post: Post; index: number }) {
         <textarea
           defaultValue={post.topic || ""}
           onBlur={(e) => handleTextBlur("topic", e.target.value)}
-          className="w-full h-full min-h-[80px] p-3 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+          className="w-full min-h-[80px] p-3 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
           placeholder="Enter topic..."
         />
       </td>
@@ -264,18 +374,126 @@ function TaskRow({ post, index }: { post: Post; index: number }) {
         </div>
       </td>
 
+      {/* ASSIGNED TO */}
+      <td className="p-0 border-r border-gray-200 align-top bg-transparent">
+        <div className="p-2">
+          <Select
+            value={post.assigned_to || ""}
+            onValueChange={(val) => updatePost.mutate({ id: post.id, updates: { assigned_to: val } })}
+            disabled={isClient}
+          >
+            <SelectTrigger className="h-9 w-full bg-transparent border-transparent hover:border-input text-xs">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned" disabled className="hidden">Unassigned</SelectItem>
+              {members.filter(m => m.role === "employee" || m.role === "admin").map((m) => (
+                <SelectItem key={m.user_id} value={m.user_id}>
+                  {m.users?.full_name || m.users?.email?.split('@')[0]} ({m.role})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </td>
+
       {/* STATUS */}
       <td className="px-4 py-3 align-middle text-center">
-        <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{
-          backgroundColor: post.status === 'draft' ? '#f3f4f6' : 
-                          post.status === 'pending_approval' ? '#fef3c7' :
-                          post.status === 'approved' ? '#d1fae5' : '#dbeafe',
-          color: post.status === 'draft' ? '#4b5563' :
-                 post.status === 'pending_approval' ? '#d97706' :
-                 post.status === 'approved' ? '#059669' : '#2563eb'
-        }}>
-          {post.status.replace("_", " ")}
-        </span>
+        <div className="flex flex-col items-center gap-2">
+          <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{
+            backgroundColor: post.status === 'draft' ? '#f3f4f6' : 
+                            post.status === 'pending_approval' ? '#fef3c7' :
+                            post.status === 'approved' ? '#d1fae5' : '#dbeafe',
+            color: post.status === 'draft' ? '#4b5563' :
+                   post.status === 'pending_approval' ? '#d97706' :
+                   post.status === 'approved' ? '#059669' : '#2563eb'
+          }}>
+            {post.status.replace("_", " ")}
+          </span>
+
+          <div className="flex flex-col gap-1 w-full mt-2">
+            {/* Employees OR Admins can submit drafts for approval */}
+            {(workspace?.role === "employee" || workspace?.role === "admin") && post.status === "draft" && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="h-7 text-[10px] w-full"
+                onClick={() => updateStatus.mutate({ id: post.id, status: "pending_approval", workspace_id: workspace.workspaceId })}
+                disabled={updateStatus.isPending}
+              >
+                Submit
+              </Button>
+            )}
+            
+            {/* Clients OR Admins can approve/reject pending posts */}
+            {(workspace?.role === "client" || workspace?.role === "admin") && post.status === "pending_approval" && (
+              <>
+                <Button 
+                  size="sm" 
+                  className="h-7 text-[10px] w-full bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => updateStatus.mutate({ id: post.id, status: "approved", workspace_id: workspace.workspaceId })}
+                  disabled={updateStatus.isPending}
+                >
+                  Approve
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  className="h-7 text-[10px] w-full"
+                  onClick={() => updateStatus.mutate({ id: post.id, status: "draft", workspace_id: workspace.workspaceId })}
+                  disabled={updateStatus.isPending}
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+
+            {/* Only Admins can final-schedule approved posts */}
+            {workspace?.role === "admin" && post.status === "approved" && (
+              <Button 
+                size="sm" 
+                className="h-7 text-[10px] w-full"
+                onClick={() => updateStatus.mutate({ id: post.id, status: "scheduled", workspace_id: workspace.workspaceId })}
+                disabled={updateStatus.isPending}
+              >
+                Schedule
+              </Button>
+            )}
+            
+            {/* Employees or Admins can mark scheduled posts as published (posted) — only on the scheduled date */}
+            {(workspace?.role === "employee" || workspace?.role === "admin") && post.status === "scheduled" && (() => {
+              const today = new Date().toISOString().slice(0, 10);
+              const scheduledDay = post.scheduled_for?.slice(0, 10);
+              return scheduledDay === today;
+            })() && (
+              <Button 
+                size="sm" 
+                className="h-7 text-[10px] w-full bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => updateStatus.mutate({ id: post.id, status: "published", workspace_id: workspace.workspaceId })}
+                disabled={updateStatus.isPending}
+              >
+                Mark Posted
+              </Button>
+            )}
+            
+            {/* Admin or Employee can delete the row */}
+            {(workspace?.role === "admin" || workspace?.role === "employee") && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-full text-red-500 hover:text-red-700 hover:bg-red-50 mt-1"
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this row?")) {
+                    deletePost.mutate(post.id);
+                  }
+                }}
+                disabled={deletePost.isPending}
+              >
+                {deletePost.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              </Button>
+            )}
+          </div>
+        </div>
       </td>
 
       {/* Hidden file input for uploads */}

@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { PLATFORM_COLOR, PLATFORMS } from "@/lib/demo-data";
-import { useCurrentWorkspace, usePosts, useCreatePost, useUpdatePostStatus, Post } from "@/lib/queries";
+import { useCurrentWorkspace, usePosts, useCreatePost, useUpdatePostStatus, Post, useClients, useWorkspaceMembers } from "@/lib/queries";
 import {
   Dialog,
   DialogContent,
@@ -25,60 +25,50 @@ export const Route = createFileRoute("/calendar")({
 
 function CalendarPage() {
   const { data: workspace } = useCurrentWorkspace();
-  const { data: posts = [], isLoading } = usePosts(workspace?.workspaceId);
+  const { data: allPosts = [], isLoading: isLoadingPosts } = usePosts(workspace?.workspaceId);
+  const { data: clients = [], isLoading: isLoadingClients } = useClients(workspace?.workspaceId);
+  const { data: members = [], isLoading: isLoadingMembers } = useWorkspaceMembers(workspace?.workspaceId);
   const createPost = useCreatePost();
   const updatePostStatus = useUpdatePostStatus();
+  const isLoading = isLoadingPosts || isLoadingClients || isLoadingMembers;
 
-  // Create Post Modal State
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [content, setContent] = useState("");
-  const [topic, setTopic] = useState("");
-  const [contentType, setContentType] = useState("Reel");
-  const [platform, setPlatform] = useState<string>("Instagram");
-  const [scheduledDay, setScheduledDay] = useState<string>("");
+  const isClient = workspace?.role === "client";
+  const clientNameForFilter = workspace?.userFullName || workspace?.userEmail?.split("@")[0] || "";
+
+  const [selectedClientFilter, setSelectedClientFilter] = useState<string>("All Clients");
+
+  // Filter posts: Only show approved/scheduled/published content on the calendar
+  const approvedPosts = allPosts.filter((p) => p.status === "approved" || p.status === "scheduled" || p.status === "published");
+
+  // Further filter for clients
+  const posts = isClient
+    ? approvedPosts.filter((p) => p.client_name?.toLowerCase() === clientNameForFilter.toLowerCase())
+    : selectedClientFilter !== "All Clients"
+    ? approvedPosts.filter((p) => p.client_name === selectedClientFilter)
+    : approvedPosts;
 
   // View Post Modal State
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  // Generate calendar days for current month (Hardcoded to July 2026 for demo sync)
-  const monthLabel = "July 2026";
-  const firstWeekday = 3; // Wed
-  const daysInMonth = 31;
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+  
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const monthLabel = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const firstWeekday = firstDay.getDay(); 
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstWeekday; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7) cells.push(null);
-
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!workspace) return;
-    
-    // Convert day to a mock date in July 2026
-    const day = parseInt(scheduledDay);
-    const date = new Date(2026, 6, day, 12, 0, 0).toISOString();
-
-    createPost.mutate({
-      workspace_id: workspace.workspaceId,
-      author_id: workspace.userId,
-      content: content,
-      topic,
-      platform,
-      content_type: contentType,
-      status: "draft",
-      scheduled_for: date,
-    }, {
-      onSuccess: () => {
-        toast.success("Post drafted successfully!");
-        setIsCreateOpen(false);
-        setContent("");
-        setTopic("");
-        setScheduledDay("");
-      },
-      onError: (err) => {
-        toast.error(err.message);
-      }
-    });
-  };
 
   const handleStatusChange = (post: Post, newStatus: string) => {
     if (!workspace) return;
@@ -98,78 +88,29 @@ function CalendarPage() {
     <AppShell
       title="Content Calendar"
       subtitle="Plan, schedule and approve content across every platform."
-      actions={
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-xl h-10" disabled={!workspace || workspace.role === 'client'}>
-              <Plus className="h-4 w-4 mr-1" /> Add Content
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Draft New Post</DialogTitle>
-              <DialogDescription>Create a new post for your clients to review.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateSubmit} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Platform</Label>
-                <Select value={platform} onValueChange={setPlatform}>
-                  <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
-                  <SelectContent>
-                    {PLATFORMS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Content Type</Label>
-                <Input
-                  value={contentType}
-                  onChange={(e) => setContentType(e.target.value)}
-                  placeholder="e.g. Reel, Static, Carousel"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Topic</Label>
-                <Input
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g. Summer Skincare Routine"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Caption Draft</Label>
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full h-20 p-3 rounded-lg border border-input bg-background text-sm"
-                  placeholder="Write your post caption here..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Scheduled Day (July 2026)</Label>
-                <Input
-                  required
-                  type="number"
-                  min="1" max="31"
-                  value={scheduledDay}
-                  onChange={(e) => setScheduledDay(e.target.value)}
-                  placeholder="e.g. 15"
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={createPost.isPending}>
-                {createPost.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : "Save Draft"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      }
     >
       <div className="card-soft p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="rounded-xl h-9 w-9"><ChevronLeft className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={handlePrevMonth}><ChevronLeft className="h-4 w-4" /></Button>
             <div className="font-semibold text-lg px-2">{monthLabel}</div>
-            <Button variant="outline" size="icon" className="rounded-xl h-9 w-9"><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={handleNextMonth}><ChevronRight className="h-4 w-4" /></Button>
+            
+            {!isClient && (
+              <div className="ml-2 sm:ml-4 w-40 sm:w-48">
+                <Select value={selectedClientFilter} onValueChange={setSelectedClientFilter}>
+                  <SelectTrigger className="h-9 rounded-xl bg-white border-input text-xs sm:text-sm">
+                    <SelectValue placeholder="All Clients" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Clients">All Clients</SelectItem>
+                    {clients.map(c => (
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="sm:ml-auto flex flex-wrap items-center gap-1.5">
             <span className="text-xs text-muted-foreground mr-1">Platforms:</span>
@@ -196,7 +137,7 @@ function CalendarPage() {
               const dayPosts = d ? posts.filter((p) => {
                 if (!p.scheduled_for) return false;
                 const date = new Date(p.scheduled_for);
-                return date.getDate() === d && date.getMonth() === 6 && date.getFullYear() === 2026;
+                return date.getDate() === d && date.getMonth() === currentDate.getMonth() && date.getFullYear() === currentDate.getFullYear();
               }) : [];
 
               return (
@@ -210,23 +151,57 @@ function CalendarPage() {
                       <div className="space-y-1">
                         {dayPosts.map((it) => {
                           const platformMatch = it.content?.match(/^\[(.*?)\]/);
-                          const platformName = it.platform || (platformMatch ? platformMatch[1] : "Instagram");
+                          const platformName = it.platform || (platformMatch ? platformMatch[1] : "");
                           const text = it.content?.replace(/^\[.*?\]\s*/, "") || "No content";
-                          const color = PLATFORM_COLOR[platformName as keyof typeof PLATFORM_COLOR] || PLATFORM_COLOR["Instagram"];
+                          const color = platformName ? (PLATFORM_COLOR[platformName as keyof typeof PLATFORM_COLOR] || "#9CA3AF") : "#9CA3AF";
+                          
+                          const isImageUrl = (url: string) => url.match(/\.(jpeg|jpg|gif|png|webp)/i) || url.includes("supabase.co");
+                          const allMedia = [...(it.completed_work || []), ...(it.reference_content || [])];
+                          const previewUrl = allMedia.find(isImageUrl);
                           
                           return (
                             <div
                               key={it.id}
                               onClick={() => setSelectedPost(it)}
-                              className={`text-[11px] rounded-lg px-2 py-1.5 text-white truncate cursor-pointer hover:opacity-90 ${it.status === 'draft' ? 'opacity-60' : ''}`}
+                              className={`text-[11px] rounded-lg p-2 text-white cursor-pointer hover:opacity-90 flex flex-col gap-1.5 ${it.status === 'draft' ? 'opacity-60' : ''} ${it.status === 'published' ? 'ring-2 ring-green-400 ring-offset-2' : ''}`}
                               style={{ background: color }}
                               title={`${it.status.toUpperCase()} — ${it.topic || text}`}
                             >
-                              {it.topic ? (
-                                <span className="font-semibold">{it.topic}</span>
-                              ) : (
-                                <span>{text}</span>
+                              {it.status === "published" && (
+                                <div className="bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase w-fit tracking-wider">
+                                  Posted
+                                </div>
                               )}
+                              
+                              {/* Preview Image */}
+                              {previewUrl && (
+                                <div className="w-full h-12 rounded bg-black/10 overflow-hidden shrink-0">
+                                  <img src={previewUrl} alt="preview" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              
+                              <div className="flex flex-col">
+                                <div className="truncate font-semibold">
+                                  {it.topic || text}
+                                </div>
+                                {it.client_name && !isClient && (
+                                  <div className="mt-1">
+                                    <span className="text-[9px] bg-black/20 px-1.5 py-0.5 rounded-full inline-block truncate max-w-full">
+                                      Client: {it.client_name}
+                                    </span>
+                                  </div>
+                                )}
+                                {it.assigned_to && members && (
+                                  <div className="mt-1">
+                                    <span className="text-[9px] bg-black/20 px-1.5 py-0.5 rounded-full inline-block truncate max-w-full">
+                                      Emp: {(() => {
+                                        const m = members.find(m => m.user_id === it.assigned_to);
+                                        return m ? (m.users?.full_name || m.users?.email?.split('@')[0]) : 'Unknown';
+                                      })()}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -240,12 +215,12 @@ function CalendarPage() {
         )}
       </div>
 
-      {/* View/Edit Post Modal */}
+      {/* View Post Modal */}
       <Dialog open={!!selectedPost} onOpenChange={(open) => !open && setSelectedPost(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Content Approval Workflow</DialogTitle>
-            <DialogDescription>Review and change the status of this post.</DialogDescription>
+            <DialogTitle>Content Details</DialogTitle>
+            <DialogDescription>Review the final approved content.</DialogDescription>
           </DialogHeader>
           {selectedPost && (
             <div className="space-y-4 pt-4">
@@ -293,38 +268,10 @@ function CalendarPage() {
               ) : null}
 
               <div className="flex items-center gap-2 text-sm pt-2">
-                <span className="font-semibold text-muted-foreground">Current Status:</span>
-                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium text-xs">
+                <span className="font-semibold text-muted-foreground">Status:</span>
+                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium text-xs">
                   {selectedPost.status.toUpperCase().replace("_", " ")}
                 </span>
-              </div>
-              
-              <div className="pt-4 border-t flex flex-wrap gap-2">
-                {/* Employees OR Admins can submit drafts for approval */}
-                {(workspace?.role === "employee" || workspace?.role === "admin") && selectedPost.status === "draft" && (
-                  <Button onClick={() => handleStatusChange(selectedPost, "pending_approval")}>
-                    Submit for Approval
-                  </Button>
-                )}
-                
-                {/* Clients OR Admins can approve/reject pending posts */}
-                {(workspace?.role === "client" || workspace?.role === "admin") && selectedPost.status === "pending_approval" && (
-                  <>
-                    <Button onClick={() => handleStatusChange(selectedPost, "approved")} className="bg-green-600 hover:bg-green-700">
-                      Approve Post
-                    </Button>
-                    <Button variant="destructive" onClick={() => handleStatusChange(selectedPost, "draft")}>
-                      Reject (Needs Edit)
-                    </Button>
-                  </>
-                )}
-
-                {/* Only Admins can final-schedule approved posts */}
-                {workspace?.role === "admin" && selectedPost.status === "approved" && (
-                  <Button onClick={() => handleStatusChange(selectedPost, "scheduled")}>
-                    Schedule & Lock
-                  </Button>
-                )}
               </div>
             </div>
           )}

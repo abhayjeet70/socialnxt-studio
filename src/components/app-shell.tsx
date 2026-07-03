@@ -5,8 +5,30 @@ import {
   Search, Bell, ChevronDown, LogOut,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useCurrentWorkspace, useUpdateProfile } from "@/lib/queries";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, LogOut as LogOutIcon, User } from "lucide-react";
 
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -28,21 +50,57 @@ export function AppShell({ children, title, subtitle, actions }: {
   subtitle?: string;
   actions?: ReactNode;
 }) {
+  const { data: workspace } = useCurrentWorkspace();
+  const updateProfile = useUpdateProfile();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+
+  const handleEditProfile = () => {
+    setEditName(workspace?.userFullName || "");
+    setIsProfileOpen(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workspace?.userId) return;
+    try {
+      await updateProfile.mutateAsync({ user_id: workspace.userId, full_name: editName });
+      toast.success("Profile updated successfully!");
+      setIsProfileOpen(false);
+    } catch (err: any) {
+      toast.error("Failed to update profile: " + err.message);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
 
   return (
     <div className="min-h-screen w-full bg-[oklch(0.985_0.005_255)] flex">
       {/* Sidebar */}
       <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
         <div className="px-6 py-5 flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-primary grid place-items-center text-primary-foreground font-bold">S</div>
+          <div className="h-9 w-9 rounded-xl bg-primary grid place-items-center text-primary-foreground font-bold">
+            {workspace?.workspaceName ? workspace.workspaceName[0].toUpperCase() : "W"}
+          </div>
           <div className="leading-tight">
-            <div className="text-base font-semibold tracking-tight text-white">SocialNxt</div>
+            <div className="text-base font-semibold tracking-tight text-white truncate max-w-[140px]" title={workspace?.workspaceName || "My Workspace"}>
+              {workspace?.workspaceName || "My Workspace"}
+            </div>
           </div>
         </div>
         <nav className="px-3 pb-6 flex-1 overflow-y-auto">
           <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-sidebar-muted">Workspace</div>
-          {NAV.map((item) => {
+          {NAV.filter(item => {
+            if (workspace?.role === "client") {
+              return ["/", "/calendar", "/tasks", "/meetings", "/proposals", "/issues"].includes(item.to);
+            }
+            return true;
+          }).map((item) => {
             const active = item.exact ? pathname === item.to : pathname === item.to || pathname.startsWith(item.to + "/");
             const Icon = item.icon;
             return (
@@ -87,14 +145,33 @@ export function AppShell({ children, title, subtitle, actions }: {
                 <Bell className="h-[18px] w-[18px] text-foreground/80" />
                 <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />
               </button>
-              <div className="flex items-center gap-2 pl-2 pr-3 h-10 rounded-xl hover:bg-muted transition-colors cursor-pointer">
-                <div className="h-8 w-8 rounded-lg bg-primary grid place-items-center text-primary-foreground text-xs font-semibold">I</div>
-                <div className="hidden md:block text-left leading-tight">
-                  <div className="text-xs font-semibold">Ishanshu</div>
-                  <div className="text-[11px] text-muted-foreground">Account Manager</div>
-                </div>
-                <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:block" />
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center gap-2 pl-2 pr-3 h-10 rounded-xl hover:bg-muted transition-colors cursor-pointer">
+                    <div className="h-8 w-8 rounded-lg bg-primary grid place-items-center text-primary-foreground text-xs font-semibold">
+                      {workspace?.userInitials || "U"}
+                    </div>
+                    <div className="hidden md:block text-left leading-tight">
+                      <div className="text-xs font-semibold">{workspace?.userFullName || "User"}</div>
+                      <div className="text-[11px] text-muted-foreground capitalize">{workspace?.role || "Member"}</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:block" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleEditProfile}>
+                    <User className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={handleSignOut}>
+                    <LogOutIcon className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
@@ -110,6 +187,36 @@ export function AppShell({ children, title, subtitle, actions }: {
           {children}
         </main>
       </div>
+
+      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>Update your personal information.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSaveProfile} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input disabled value={workspace?.userEmail || ""} />
+              <p className="text-xs text-muted-foreground">Email cannot be changed currently.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fullname">Full Name</Label>
+              <Input
+                id="fullname"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter your name"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={updateProfile.isPending}>
+              {updateProfile.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save Changes
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

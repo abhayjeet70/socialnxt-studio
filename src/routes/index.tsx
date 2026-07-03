@@ -11,12 +11,9 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
-import {
-  CLIENTS, EMPLOYEES, MEETINGS, REVENUE_BY_MONTH, PLATFORM_DISTRIBUTION,
-  PLATFORM_COLOR, TASKS,
-} from "@/lib/demo-data";
+import { PLATFORM_COLOR } from "@/lib/demo-data";
 import { supabase } from "@/lib/supabase";
-import { useCurrentWorkspace, useDashboardStats } from "@/lib/queries";
+import { useCurrentWorkspace, useDashboardStats, useRevenueGraph, usePosts, useClients, useWorkspaceMembers, useMeetings } from "@/lib/queries";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard — SocialNxt CRM" }] }),
@@ -37,18 +34,74 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
-const STATS = [
-  { label: "Total Clients", value: "24", delta: "+3 this month", icon: Users, tone: "text-primary bg-primary/10" },
-  { label: "Active Projects", value: "18", delta: "+2 this week", icon: Briefcase, tone: "text-[#10B981] bg-[#10B981]/10" },
-  { label: "Content Scheduled", value: "142", delta: "Next 30 days", icon: CalendarClock, tone: "text-[#F59E0B] bg-[#F59E0B]/10" },
-  { label: "Posts Published", value: "386", delta: "+48 this month", icon: Send, tone: "text-[#EC4899] bg-[#EC4899]/10" },
-  { label: "Revenue", value: "₹6.4L", delta: "+12.4%", icon: IndianRupee, tone: "text-[#8B5CF6] bg-[#8B5CF6]/10" },
-  { label: "Pending Approvals", value: "7", delta: "Needs review", icon: CheckCircle2, tone: "text-[#EF4444] bg-[#EF4444]/10" },
-];
 
 function Dashboard() {
   const { data: workspace, isLoading: workspaceLoading } = useCurrentWorkspace();
   const stats = useDashboardStats(workspace?.workspaceId);
+  const { data: revenueData = [] } = useRevenueGraph(workspace?.workspaceId);
+  const { data: allPosts = [] } = usePosts(workspace?.workspaceId);
+  const { data: clients = [] } = useClients(workspace?.workspaceId);
+  const { data: members = [] } = useWorkspaceMembers(workspace?.workspaceId);
+  const { data: allMeetings = [] } = useMeetings(workspace?.workspaceId);
+
+  // ─── Platform Distribution (real) ───────────────────────────────────────────
+  const platformCounts: Record<string, number> = {};
+  allPosts.forEach((p) => { if (p.platform) platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1; });
+  const totalPlatformPosts = Object.values(platformCounts).reduce((a, b) => a + b, 0);
+  const livePlatformDistribution = Object.entries(platformCounts)
+    .map(([name, count]) => ({ name, value: totalPlatformPosts > 0 ? Math.round((count / totalPlatformPosts) * 100) : 0 }))
+    .sort((a, b) => b.value - a.value);
+
+  // ─── Content Progress (real) ─────────────────────────────────────────────────
+  const liveContentProgress = clients
+    .map((c) => {
+      const clientPosts = allPosts.filter((p) => p.client_name === c.name);
+      const donePosts = clientPosts.filter((p) => p.status === "published" || p.status === "approved" || p.status === "scheduled");
+      const pct = clientPosts.length > 0 ? Math.round((donePosts.length / clientPosts.length) * 100) : 0;
+      const initials = c.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+      return { id: c.id, name: c.name, initials, pct };
+    })
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 5);
+
+  const bgColors = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#3b82f6"];
+
+  // ─── Team Workload (real) ────────────────────────────────────────────────────
+  const liveTeamWorkload = members
+    .filter((m) => m.role === "employee" || m.role === "admin")
+    .map((m) => ({
+      name: (m.users?.full_name || m.users?.email || "Unknown").split(" ")[0],
+      tasks: allPosts.filter((p) => p.assigned_to === m.user_id).length,
+    }))
+    .filter((e) => e.tasks > 0);
+
+  // ─── Today's Tasks (real) ────────────────────────────────────────────────────
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todaysTasks = allPosts
+    .filter((p) => {
+      const scheduledDay = p.scheduled_for?.slice(0, 10);
+      return scheduledDay === todayStr || p.status === "pending_approval";
+    })
+    .slice(0, 5);
+
+  // ─── Recent Activities (real) ────────────────────────────────────────────────
+  const recentActivities = [...allPosts]
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, 5)
+    .map((p) => {
+      const assignedMember = members.find((m) => m.user_id === p.assigned_to);
+      const who = assignedMember?.users?.full_name || assignedMember?.users?.email?.split("@")[0] || "Someone";
+      const action = p.status === "published" ? "marked as posted" : p.status === "approved" ? "approved" : p.status === "pending_approval" ? "submitted for approval" : "updated";
+      const diffMs = Date.now() - new Date(p.updated_at).getTime();
+      const diffH = Math.floor(diffMs / 3600000);
+      const when = diffH < 1 ? "Just now" : diffH < 24 ? `${diffH}h ago` : diffH < 48 ? "Yesterday" : `${Math.floor(diffH / 24)}d ago`;
+      return { who, what: `${action} — ${p.topic || p.client_name || "post"}`, when };
+    });
+
+  // ─── Upcoming Meetings (real) ────────────────────────────────────────────────
+  const upcomingMeetings = allMeetings
+    .filter((m) => new Date(m.scheduled_at) > new Date())
+    .slice(0, 3);
 
   // Build live stat cards (replacing hard-coded STATS)
   const LIVE_STATS = [
@@ -100,11 +153,16 @@ function Dashboard() {
     <AppShell
       title={`Good morning, ${workspace?.userEmail?.split("@")[0] ?? "there"}`}
       subtitle="Here's what's happening across your agency today."
-      actions={<Button className="rounded-xl h-10">+ Quick Action</Button>}
+
     >
       {/* Stat cards — live from Supabase */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        {LIVE_STATS.map((s) => (
+        {LIVE_STATS.filter(s => {
+          if (workspace?.role === "client") {
+            return ["Pending Approvals", "Scheduled", "Posts Published"].includes(s.label);
+          }
+          return true;
+        }).map((s) => (
           <div key={s.label} className="card-soft lift p-4">
             <div className={`h-10 w-10 rounded-xl grid place-items-center ${s.tone}`}>
               <s.icon className="h-5 w-5" />
@@ -118,6 +176,8 @@ function Dashboard() {
         ))}
       </div>
 
+      {workspace?.role !== "client" && (
+        <>
       {/* Charts row */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
         <div className="card-soft p-5 xl:col-span-2">
@@ -130,7 +190,7 @@ function Dashboard() {
           </div>
           <div className="h-64">
             <ResponsiveContainer>
-              <AreaChart data={REVENUE_BY_MONTH}>
+              <AreaChart data={revenueData.length ? revenueData : [{ month: "Jan", revenue: 0 }]}>
                 <defs>
                   <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#2563EB" stopOpacity={0.35} />
@@ -152,22 +212,26 @@ function Dashboard() {
             <div className="text-sm font-semibold">Platform Distribution</div>
           </div>
           <div className="h-48">
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie data={PLATFORM_DISTRIBUTION} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                  {PLATFORM_DISTRIBUTION.map((p) => (
-                    <Cell key={p.name} fill={PLATFORM_COLOR[p.name as keyof typeof PLATFORM_COLOR]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
+            {livePlatformDistribution.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">No posts yet</div>
+            ) : (
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={livePlatformDistribution} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                    {livePlatformDistribution.map((p) => (
+                      <Cell key={p.name} fill={PLATFORM_COLOR[p.name as keyof typeof PLATFORM_COLOR] ?? "#9CA3AF"} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
           <div className="space-y-2 mt-2">
-            {PLATFORM_DISTRIBUTION.map((p) => (
+            {livePlatformDistribution.map((p) => (
               <div key={p.name} className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: PLATFORM_COLOR[p.name as keyof typeof PLATFORM_COLOR] }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: PLATFORM_COLOR[p.name as keyof typeof PLATFORM_COLOR] ?? "#9CA3AF" }} />
                   {p.name}
                 </span>
                 <span className="font-semibold">{p.value}%</span>
@@ -185,21 +249,20 @@ function Dashboard() {
             <button className="text-xs text-primary font-medium hover:underline">View all</button>
           </div>
           <div className="space-y-4">
-            {CLIENTS.slice(0, 5).map((c, i) => {
-              const pct = [82, 64, 48, 92, 36][i];
-              return (
-                <div key={c.id}>
-                  <div className="flex items-center justify-between text-sm mb-1.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="h-7 w-7 rounded-lg grid place-items-center text-[11px] font-semibold text-white shrink-0" style={{ background: c.color }}>{c.initials}</div>
-                      <span className="truncate font-medium">{c.name}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground shrink-0">{pct}%</span>
+            {liveContentProgress.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No clients with posts yet.</div>
+            ) : liveContentProgress.map((c, i) => (
+              <div key={c.id}>
+                <div className="flex items-center justify-between text-sm mb-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-7 w-7 rounded-lg grid place-items-center text-[11px] font-semibold text-white shrink-0" style={{ background: bgColors[i % bgColors.length] }}>{c.initials}</div>
+                    <span className="truncate font-medium">{c.name}</span>
                   </div>
-                  <Progress value={pct} className="h-1.5" />
+                  <span className="text-xs text-muted-foreground shrink-0">{c.pct}%</span>
                 </div>
-              );
-            })}
+                <Progress value={c.pct} className="h-1.5" />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -209,18 +272,24 @@ function Dashboard() {
             <button className="text-xs text-primary font-medium hover:underline">Manage</button>
           </div>
           <div className="h-64">
-            <ResponsiveContainer>
-              <BarChart data={EMPLOYEES.map(e => ({ name: e.name.split(" ")[0], tasks: e.tasks }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} stroke="#94a3b8" />
-                <YAxis tickLine={false} axisLine={false} fontSize={12} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
-                <Bar dataKey="tasks" fill="#2563EB" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {liveTeamWorkload.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">No assigned tasks yet.</div>
+            ) : (
+              <ResponsiveContainer>
+                <BarChart data={liveTeamWorkload}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} stroke="#94a3b8" />
+                  <YAxis tickLine={false} axisLine={false} fontSize={12} stroke="#94a3b8" allowDecimals={false} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
+                  <Bar dataKey="tasks" fill="#2563EB" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Tasks + Activity + Meetings */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
@@ -230,16 +299,25 @@ function Dashboard() {
             <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="space-y-3">
-            {TASKS.slice(0, 5).map((t) => (
-              <div key={t.id} className="flex items-start gap-3">
-                <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${t.priority === "High" ? "bg-[#EF4444]" : t.priority === "Medium" ? "bg-[#F59E0B]" : "bg-[#10B981]"}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">{t.title}</div>
-                  <div className="text-xs text-muted-foreground truncate">{t.client} · {t.assignee}</div>
+            {todaysTasks.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No tasks scheduled for today.</div>
+            ) : todaysTasks.map((t) => {
+              const statusColor = t.status === "pending_approval" ? "bg-[#F59E0B]" : t.status === "draft" ? "bg-[#9CA3AF]" : "bg-[#10B981]";
+              const assignedMember = members.find((m) => m.user_id === t.assigned_to);
+              const assigneeName = assignedMember?.users?.full_name || assignedMember?.users?.email?.split("@")[0] || "Unassigned";
+              return (
+                <div key={t.id} className="flex items-start gap-3">
+                  <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${statusColor}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate">{t.topic || t.content_type || "Post"}</div>
+                    <div className="text-xs text-muted-foreground truncate">{t.client_name} · {assigneeName}</div>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground shrink-0">
+                    {t.scheduled_for ? new Date(t.scheduled_for).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : t.status.replace("_", " ")}
+                  </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground shrink-0">{t.due}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -249,13 +327,9 @@ function Dashboard() {
             <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           </div>
           <ol className="relative ml-2 border-l border-border space-y-4">
-            {[
-              { who: "Priya Sharma", what: "uploaded 5 reels for Sukriti Sampada", when: "2h ago" },
-              { who: "Karan Patel", what: "approved AAS NGO July plan", when: "4h ago" },
-              { who: "Rohan Kapoor", what: "completed fight promo edit", when: "Yesterday" },
-              { who: "Neha Verma", what: "added captions for WebNxt", when: "Yesterday" },
-              { who: "Vikram Singh", what: "scheduled 12 posts on Instagram", when: "2d ago" },
-            ].map((a, i) => (
+            {recentActivities.length === 0 ? (
+              <li className="pl-4 text-xs text-muted-foreground">No recent activity.</li>
+            ) : recentActivities.map((a, i) => (
               <li key={i} className="pl-4 relative">
                 <span className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-primary/15" />
                 <div className="text-sm"><span className="font-semibold">{a.who}</span> <span className="text-muted-foreground">{a.what}</span></div>
@@ -271,20 +345,27 @@ function Dashboard() {
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="space-y-3">
-            {MEETINGS.filter(m => m.status === "Upcoming").map((m) => (
-              <div key={m.id} className="rounded-xl border border-border p-3 hover:border-primary/40 transition-colors">
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0">
-                    <Video className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold truncate">{m.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">{m.client}</div>
-                    <div className="text-[11px] mt-1 text-foreground/70">{m.date} · {m.time}</div>
+            {upcomingMeetings.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No upcoming meetings.</div>
+            ) : upcomingMeetings.map((m) => {
+              const dt = new Date(m.scheduled_at);
+              const dateStr = dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+              const timeStr = dt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+              return (
+                <div key={m.id} className="rounded-xl border border-border p-3 hover:border-primary/40 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0">
+                      <Video className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold truncate">{m.agenda}</div>
+                      <div className="text-xs text-muted-foreground truncate">{m.users?.full_name || "Team"}</div>
+                      <div className="text-[11px] mt-1 text-foreground/70">{dateStr} · {timeStr}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

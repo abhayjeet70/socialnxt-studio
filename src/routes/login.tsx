@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
-import { Check, Eye, FileText, Image, LayoutGrid, Play, UsersRound } from "lucide-react";
+import { type ReactNode, useState, useEffect } from "react";
+import { Check, Eye, FileText, Image, LayoutGrid, Play, UsersRound, KeyRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -134,19 +134,49 @@ function MicrosoftMark() {
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "set_password">("signin");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  // Detect if this is an invite callback from Supabase (URL has #type=invite or #type=recovery)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes("type=invite") || hash.includes("type=recovery")) {
+      // Supabase sets the session from the hash automatically
+      // We just need to show the set-password form
+      setMode("set_password");
+    }
+  }, []);
+
   const switchMode = (m: "signin" | "signup") => {
     setMode(m);
     setErrorMsg("");
     setSuccessMsg("");
+  };
+
+  const handleSetPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password !== confirmPassword) {
+      setErrorMsg("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters.");
+      return;
+    }
+    setIsLoading(true);
+    setErrorMsg("");
+    const { error } = await supabase.auth.updateUser({ password });
+    setIsLoading(false);
+    if (error) { setErrorMsg(error.message); return; }
+    setSuccessMsg("Password set! Redirecting to your dashboard...");
+    setTimeout(() => navigate({ to: "/" }), 1500);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -219,6 +249,74 @@ function LoginPage() {
               </div>
             </div>
 
+            {/* Set Password Mode (invite/reset flow) */}
+            {mode === "set_password" ? (
+              <>
+                <div className="mb-8 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100">
+                    <KeyRound className="h-7 w-7 text-blue-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold tracking-normal">Set your password</h2>
+                  <p className="mt-2 text-sm text-[#6b7a9b]">
+                    You've been invited! Create a password to access your workspace.
+                  </p>
+                </div>
+
+                <form className="space-y-5" onSubmit={handleSetPassword}>
+                  {errorMsg && (
+                    <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{errorMsg}</div>
+                  )}
+                  {successMsg && (
+                    <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password" className="text-sm font-semibold text-[#182652]">
+                      New Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="new-password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Min. 6 characters"
+                        required
+                        className="h-[54px] rounded-lg border-[#cfd8e8] bg-white px-4 pr-12 text-base"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b9ab8] hover:text-[#153dff]"
+                      >
+                        <Eye className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-sm font-semibold text-[#182652]">
+                      Confirm Password
+                    </Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter your password"
+                      required
+                      className="h-[54px] rounded-lg border-[#cfd8e8] bg-white px-4 text-base"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="h-[54px] w-full rounded-lg bg-[#0828ff] text-base font-semibold text-white shadow-[0_12px_25px_rgba(8,40,255,0.25)] hover:bg-[#001bd1]"
+                  >
+                    {isLoading ? "Setting password..." : "Set Password & Enter Workspace"}
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <>
             {/* Mode Tabs */}
             <div className="flex rounded-xl bg-[#f1f4fb] p-1 mb-8">
               <button
@@ -365,6 +463,8 @@ function LoginPage() {
                 Microsoft
               </Button>
             </div>
+          </>
+          )}
           </div>
         </div>
       </section>
