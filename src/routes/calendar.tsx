@@ -123,6 +123,8 @@ function CalendarPage() {
           </div>
         </div>
 
+        <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
+        <div style={{ minWidth: 700 }}>
         <div className="grid grid-cols-7 text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
             <div key={d} className="px-2 py-1 font-semibold">{d}</div>
@@ -213,6 +215,8 @@ function CalendarPage() {
             })}
           </div>
         )}
+        </div>{/* min-width wrapper */}
+        </div>{/* overflow-x-auto wrapper */}
       </div>
 
       {/* View Post Modal */}
