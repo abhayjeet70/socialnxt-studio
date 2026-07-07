@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, AlertOctagon, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCurrentWorkspace, useIssues, useCreateIssue, useUpdateIssueStatus, useWorkspaceMembers, type Issue } from "@/lib/queries";
+import { useCurrentWorkspace, useIssues, useCreateIssue, useUpdateIssueStatus, useClients, useWorkspaceMembers, type Issue } from "@/lib/queries";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/issues")({
@@ -45,6 +45,9 @@ function IssuesPage() {
   const [clientId, setClientId] = useState<string>("none");
 
   const isClient = workspace?.role === "client";
+  const { data: clientsList = [] } = useClients(workspace?.workspaceId);
+  const activeClients = clientsList.filter(c => c.status !== "Closed");
+
   const { data: members = [] } = useWorkspaceMembers(workspace?.workspaceId);
   const clientMembers = members.filter(m => m.role === "client");
 
@@ -232,16 +235,33 @@ function IssuesPage() {
                 </SelectContent>
               </Select>
             </div>
-            {!isClient && clientMembers.length > 0 && (
+            {!isClient && (activeClients.length > 0 || clientMembers.length > 0) && (
               <div className="space-y-2">
                 <Label>Client Name</Label>
                 <Select value={clientId} onValueChange={setClientId}>
                   <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No specific client</SelectItem>
+                    
+                    {clientMembers.length > 0 && (
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Invited Clients (Users)
+                      </div>
+                    )}
                     {clientMembers.map((m) => (
                       <SelectItem key={m.user_id} value={m.user_id}>
                         {m.users?.full_name || m.users?.email?.split("@")[0] || "Unknown"}
+                      </SelectItem>
+                    ))}
+
+                    {activeClients.length > 0 && (
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2 border-t">
+                        Business Clients
+                      </div>
+                    )}
+                    {activeClients.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

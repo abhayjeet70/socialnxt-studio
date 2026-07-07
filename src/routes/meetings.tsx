@@ -38,7 +38,10 @@ function MeetingsPage() {
 
   // Clients only see meetings tagged to them; admins/employees see all
   const meetings = isClient
-    ? allMeetings.filter((m) => (m as any).client_id === workspace?.userId)
+    ? allMeetings.filter((m) => {
+        const pIds = (m as any).participant_ids || [];
+        return pIds.includes(workspace?.userId) || (m as any).client_id === workspace?.userId;
+      })
     : allMeetings;
 
   // Only show client members in the picker
@@ -64,8 +67,6 @@ function MeetingsPage() {
         scheduled_at,
         participant_type: participantType,
         participant_ids: participantIds,
-        // Optional backward compatibility
-        ...(participantType === "client" && participantIds.length === 1 && { client_id: participantIds[0] }),
       } as any);
       toast.success("Meeting scheduled!");
       setIsDialogOpen(false);

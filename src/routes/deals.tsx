@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { Plus, IndianRupee, Calendar as CalIcon, User as UserIcon, Loader2, Trash2, GripVertical, Pencil } from "lucide-react";
+import { Plus, IndianRupee, Calendar as CalIcon, User as UserIcon, Loader2, Trash2, GripVertical, Pencil, Download } from "lucide-react";
 import { useCurrentWorkspace, useDeals, useCreateDeal, useUpdateDealStage, useDeleteDeal, useClients, useUpdateDeal, Deal } from "@/lib/queries";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -133,6 +133,32 @@ function DealsPage() {
     }
   };
 
+  const handleExportDeals = () => {
+    if (visibleDeals.length === 0) {
+      toast.error("No deals to export.");
+      return;
+    }
+
+    const headers = ["Client Name", "Project Name", "Amount (INR)", "Days", "Stage", "Created By", "Date Created"];
+    const csvContent = [
+      headers.join(","),
+      ...visibleDeals.map(d => {
+        const ownerName = d.users?.full_name || d.users?.email || "Unknown";
+        const date = new Date(d.created_at).toLocaleDateString();
+        return `"${d.client_name}","${d.project_name}","${d.amount}","${d.days}","${d.stage}","${ownerName}","${date}"`;
+      })
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `deals_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // ── Drag handlers ──
   const handleDragStart = (e: React.DragEvent, dealId: string, stage: string) => {
     dragCardId.current = dealId;
@@ -184,11 +210,16 @@ function DealsPage() {
       title="Deals"
       subtitle="Kanban view of every active project across stages."
       actions={
-        canEdit && (
-          <Button onClick={() => setIsDialogOpen(true)} className="rounded-xl h-10">
-            <Plus className="h-4 w-4 mr-2" /> Add Deal
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportDeals} className="rounded-xl h-10 bg-white">
+            <Download className="h-4 w-4 mr-2" /> Export
           </Button>
-        )
+          {canEdit && (
+            <Button onClick={() => setIsDialogOpen(true)} className="rounded-xl h-10">
+              <Plus className="h-4 w-4 mr-2" /> Add Deal
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="overflow-x-auto">

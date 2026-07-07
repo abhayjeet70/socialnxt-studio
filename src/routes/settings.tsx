@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Plus, Loader2, Save, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
 import {
   useCurrentWorkspace, useWorkspaceMembers, useRemoveWorkspaceMember, useUpdateWorkspace,
 } from "@/lib/queries";
@@ -26,16 +26,34 @@ const ROLE_COLORS: Record<string, string> = {
 
 const BG_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#3b82f6", "#14b8a6", "#f97316", "#8b5cf6"];
 
-const PERMISSIONS = [
-  { label: "View all clients", roles: ["admin", "employee"] },
-  { label: "Edit content calendar", roles: ["admin", "employee"] },
-  { label: "Approve proposals", roles: ["admin"] },
-  { label: "Manage employees", roles: ["admin"] },
-  { label: "Export reports", roles: ["admin"] },
-  { label: "View reports", roles: ["admin", "employee"] },
-  { label: "Delete content rows", roles: ["admin", "employee"] },
-  { label: "Mark posts as Posted", roles: ["admin", "employee"] },
+const DEFAULT_PERMISSIONS = [
+  { label: "View all clients", key: "view_clients", roles: { admin: true, employee: true, client: false } },
+  { label: "Edit content calendar", key: "edit_calendar", roles: { admin: true, employee: true, client: false } },
+  { label: "Approve proposals", key: "approve_proposals", roles: { admin: true, employee: false, client: false } },
+  { label: "Manage employees", key: "manage_employees", roles: { admin: true, employee: false, client: false } },
+  { label: "Export reports", key: "export_reports", roles: { admin: true, employee: false, client: false } },
+  { label: "View reports", key: "view_reports", roles: { admin: true, employee: true, client: false } },
+  { label: "Delete content rows", key: "delete_content", roles: { admin: true, employee: true, client: false } },
+  { label: "Mark posts as Posted", key: "mark_posted", roles: { admin: true, employee: true, client: false } },
 ];
+
+type PermMatrix = Record<string, Record<string, boolean>>;
+
+function loadPermissions(workspaceId: string): PermMatrix {
+  try {
+    const stored = localStorage.getItem(`perms_${workspaceId}`);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  const matrix: PermMatrix = {};
+  for (const p of DEFAULT_PERMISSIONS) {
+    matrix[p.key] = { ...p.roles };
+  }
+  return matrix;
+}
+
+function savePermissions(workspaceId: string, matrix: PermMatrix) {
+  localStorage.setItem(`perms_${workspaceId}`, JSON.stringify(matrix));
+}
 
 function SettingsPage() {
   const { data: workspace } = useCurrentWorkspace();
@@ -47,6 +65,17 @@ function SettingsPage() {
   const [companyName, setCompanyName] = useState(workspace?.workspaceName || "");
   const [supportEmail, setSupportEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Permissions state
+  const [permMatrix, setPermMatrix] = useState<PermMatrix>({});
+  const [permsDirty, setPermsDirty] = useState(false);
+  const [permsSaving, setPermsSaving] = useState(false);
+
+  useEffect(() => {
+    if (workspace?.workspaceId) {
+      setPermMatrix(loadPermissions(workspace.workspaceId));
+    }
+  }, [workspace?.workspaceId]);
 
   // Group members by role
   const byRole = {
@@ -80,6 +109,37 @@ function SettingsPage() {
         onSettled: () => setIsSaving(false),
       }
     );
+  };
+
+  const handleToggle = (permKey: string, role: string, value: boolean) => {
+    setPermMatrix((prev) => ({
+      ...prev,
+      [permKey]: {
+        ...prev[permKey],
+        [role]: value,
+      },
+    }));
+    setPermsDirty(true);
+  };
+
+  const handleSavePermissions = () => {
+    if (!workspace) return;
+    setPermsSaving(true);
+    setTimeout(() => {
+      savePermissions(workspace.workspaceId, permMatrix);
+      setPermsDirty(false);
+      setPermsSaving(false);
+      toast.success("Permissions saved successfully!");
+    }, 400);
+  };
+
+  const handleResetPermissions = () => {
+    const matrix: PermMatrix = {};
+    for (const p of DEFAULT_PERMISSIONS) {
+      matrix[p.key] = { ...p.roles };
+    }
+    setPermMatrix(matrix);
+    setPermsDirty(true);
   };
 
   return (
@@ -208,9 +268,49 @@ function SettingsPage() {
         {/* ─── Permissions Tab ────────────────────────────────────────────────── */}
         <TabsContent value="permissions" className="mt-5">
           <div className="card-soft p-5 space-y-4">
-            <div className="text-xs text-muted-foreground mb-2">
-              Showing permissions by role. Contact the admin to change access levels.
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 font-semibold text-base">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  Role Permissions
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {isAdmin
+                    ? "Toggle permissions for each role. Changes apply workspace-wide."
+                    : "Showing permissions by role. Only admins can change access levels."}
+                </div>
+              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl h-9 text-xs"
+                    onClick={handleResetPermissions}
+                  >
+                    Reset to defaults
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="rounded-xl h-9 text-xs gap-1"
+                    onClick={handleSavePermissions}
+                    disabled={!permsDirty || permsSaving}
+                  >
+                    {permsSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    Save changes
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {/* Unsaved indicator */}
+            {permsDirty && isAdmin && (
+              <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                You have unsaved permission changes. Click "Save changes" to apply them.
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[500px]">
                 <thead>
@@ -222,23 +322,60 @@ function SettingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {PERMISSIONS.map((p) => (
-                    <tr key={p.label} className="border-t border-border">
+                  {DEFAULT_PERMISSIONS.map((p) => (
+                    <tr key={p.key} className="border-t border-border hover:bg-muted/30 transition-colors">
                       <td className="px-3 py-3 font-medium">{p.label}</td>
-                      {["admin", "employee", "client"].map((role) => (
-                        <td key={role} className="px-3 py-3 text-center">
-                          {p.roles.includes(role) ? (
-                            <span className="text-green-600 font-bold text-base">✓</span>
-                          ) : (
-                            <span className="text-muted-foreground text-base">—</span>
-                          )}
-                        </td>
-                      ))}
+                      {(["admin", "employee", "client"] as const).map((role) => {
+                        const isOn = permMatrix[p.key]?.[role] ?? p.roles[role];
+                        const isLocked = role === "admin";
+                        return (
+                          <td key={role} className="px-3 py-3 text-center">
+                            {isAdmin ? (
+                              <div className="flex justify-center">
+                                <Switch
+                                  checked={isLocked ? true : isOn}
+                                  disabled={isLocked}
+                                  onCheckedChange={(val) => !isLocked && handleToggle(p.key, role, val)}
+                                  className={isLocked ? "opacity-50 cursor-not-allowed" : ""}
+                                />
+                              </div>
+                            ) : (
+                              isOn
+                                ? <span className="text-green-600 font-bold text-base">✓</span>
+                                : <span className="text-muted-foreground text-base">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {/* Legend */}
+            {isAdmin && (
+              <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-muted-foreground border-t">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-4 w-7 bg-primary/20 rounded-full relative">
+                    <div className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full bg-primary" />
+                  </div>
+                  Permission granted
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-4 w-7 bg-muted rounded-full relative">
+                    <div className="absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-muted-foreground/40" />
+                  </div>
+                  Permission denied
+                </div>
+                <div className="flex items-center gap-1.5 opacity-50">
+                  <div className="h-4 w-7 bg-primary/20 rounded-full relative">
+                    <div className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full bg-primary" />
+                  </div>
+                  Locked (Admin always has access)
+                </div>
+              </div>
+            )}
           </div>
         </TabsContent>
 

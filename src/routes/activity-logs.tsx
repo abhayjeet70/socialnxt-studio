@@ -245,6 +245,52 @@ function ActivityLogsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportExcel = () => {
+    if (filteredActivities.length === 0) return;
+
+    const cols = ["Date", "Time", "Who", "Action", "Subject", "Client", "Platform", "Details"];
+
+    const esc = (v: string) => v?.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") ?? "";
+
+    const headerRow = cols.map(c => `<Cell ss:StyleID="hdr"><Data ss:Type="String">${esc(c)}</Data></Cell>`).join("");
+
+    const dataRows = filteredActivities.map(a => {
+      const date = a.ts.toLocaleDateString("en-IN");
+      const time = a.ts.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      const cells = [date, time, a.who, a.action, a.subject, a.client, a.platform, a.extra]
+        .map(v => `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`)
+        .join("");
+      return `<Row>${cells}</Row>`;
+    }).join("");
+
+    const xml = [
+      `<?xml version="1.0" encoding="UTF-8"?>`,
+      `<?mso-application progid="Excel.Sheet"?>`,
+      `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"`,
+      ` xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">`,
+      `<Styles>`,
+      `<Style ss:ID="hdr"><Font ss:Bold="1"/><Interior ss:Color="#7C3AED" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style>`,
+      `</Styles>`,
+      `<Worksheet ss:Name="Activity Logs">`,
+      `<Table>`,
+      `<Row>${headerRow}</Row>`,
+      dataRows,
+      `</Table>`,
+      `</Worksheet>`,
+      `</Workbook>`,
+    ].join("");
+
+    const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `activity-logs-${new Date().toISOString().split("T")[0]}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportPDF = () => {
     window.print();
   };
@@ -256,16 +302,19 @@ function ActivityLogsPage() {
       actions={
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-xl h-10 border-border" disabled={filteredActivities.length === 0}>
+            <Button className="rounded-xl h-10" disabled={filteredActivities.length === 0}>
               <Download className="h-4 w-4 mr-2" /> Export Logs
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
-              <FileText className="h-4 w-4 mr-2" /> Export as CSV
+            <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer gap-2">
+              <FileText className="h-4 w-4 text-green-600" /> Export as Excel (.xls)
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
-              <FileText className="h-4 w-4 mr-2" /> Export as PDF (Print)
+            <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer gap-2">
+              <FileText className="h-4 w-4" /> Export as CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer gap-2">
+              <FileText className="h-4 w-4 text-red-500" /> Export as PDF (Print)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
