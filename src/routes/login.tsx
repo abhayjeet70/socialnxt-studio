@@ -32,7 +32,7 @@ function SocialNxtLogo() {
 function FloatingTile({ className, children }: { className: string; children: ReactNode }) {
   return (
     <div
-      className={`absolute grid h-14 w-14 place-items-center rounded-xl border border-white/15 bg-blue-500/90 text-white shadow-[0_18px_40px_rgba(38,87,255,0.35)] ${className}`}
+      className={`absolute grid h-14 w-14 place-items-center rounded-xl border border-white/15 bg-purple-500/90 text-white shadow-[0_18px_40px_rgba(109,40,217,0.35)] ${className}`}
     >
       {children}
     </div>
@@ -42,12 +42,12 @@ function FloatingTile({ className, children }: { className: string; children: Re
 function LoginIllustration() {
   return (
     <div className="relative mx-auto mt-8 h-[360px] w-full max-w-[500px]">
-      <div className="absolute bottom-0 left-1/2 h-28 w-[410px] -translate-x-1/2 rounded-[50%] bg-[#092986] shadow-[inset_0_0_0_2px_rgba(66,118,255,0.4)]" />
-      <div className="absolute bottom-14 left-1/2 h-7 w-[250px] -translate-x-1/2 rounded-b-3xl bg-[#5b8bff] shadow-[0_20px_35px_rgba(0,0,0,0.35)]" />
-      <div className="absolute bottom-[86px] left-1/2 h-[118px] w-[230px] -translate-x-1/2 -skew-y-6 rounded-xl border border-blue-200/40 bg-[#8bb2ff] p-3 shadow-[0_24px_45px_rgba(0,0,0,0.35)]">
-        <div className="h-full rounded-lg bg-[#071a64] p-3">
+      <div className="absolute bottom-0 left-1/2 h-28 w-[410px] -translate-x-1/2 rounded-[50%] bg-[#2d0d6b] shadow-[inset_0_0_0_2px_rgba(139,92,246,0.4)]" />
+      <div className="absolute bottom-14 left-1/2 h-7 w-[250px] -translate-x-1/2 rounded-b-3xl bg-[#7c3aed] shadow-[0_20px_35px_rgba(0,0,0,0.35)]" />
+      <div className="absolute bottom-[86px] left-1/2 h-[118px] w-[230px] -translate-x-1/2 -skew-y-6 rounded-xl border border-purple-200/40 bg-[#a78bfa] p-3 shadow-[0_24px_45px_rgba(0,0,0,0.35)]">
+        <div className="h-full rounded-lg bg-[#2e1065] p-3">
           <div className="h-full rounded-md bg-white p-3">
-            <div className="mb-2 h-2 w-16 rounded-full bg-[#152e83]" />
+            <div className="mb-2 h-2 w-16 rounded-full bg-[#4c1d95]" />
             <div className="grid grid-cols-[1fr_78px] gap-3">
               <div className="space-y-2">
                 <div className="h-3 rounded-full bg-[#ffd2e3]" />
@@ -60,7 +60,7 @@ function LoginIllustration() {
               </div>
               <div className="flex items-end gap-1.5">
                 <div className="h-8 w-4 rounded-t-sm bg-[#ffb15f]" />
-                <div className="h-12 w-4 rounded-t-sm bg-[#7b64ff]" />
+                <div className="h-12 w-4 rounded-t-sm bg-[#7c3aed]" />
                 <div className="h-16 w-4 rounded-t-sm bg-[#30b7ff]" />
                 <div className="h-10 w-4 rounded-t-sm bg-[#ffa3c1]" />
               </div>
@@ -68,27 +68,27 @@ function LoginIllustration() {
           </div>
         </div>
       </div>
-      <div className="absolute bottom-[57px] left-1/2 h-20 w-[265px] -translate-x-1/2 skew-x-[-28deg] rounded-sm bg-[#76a2ff]" />
-      <div className="absolute bottom-[72px] left-[calc(50%-80px)] h-10 w-[92px] skew-x-[-28deg] rounded bg-[#0b2a86]" />
+      <div className="absolute bottom-[57px] left-1/2 h-20 w-[265px] -translate-x-1/2 skew-x-[-28deg] rounded-sm bg-[#a78bfa]" />
+      <div className="absolute bottom-[72px] left-[calc(50%-80px)] h-10 w-[92px] skew-x-[-28deg] rounded bg-[#3b0764]" />
       <div className="absolute bottom-[82px] left-[calc(50%-14px)] grid grid-cols-5 gap-1">
         {Array.from({ length: 20 }).map((_, index) => (
-          <span key={index} className="h-1.5 w-4 rounded-sm bg-[#183da6]" />
+          <span key={index} className="h-1.5 w-4 rounded-sm bg-[#4c1d95]" />
         ))}
       </div>
 
-      <FloatingTile className="left-12 top-48 bg-[#125bff]">
+      <FloatingTile className="left-12 top-48 bg-[#6d28d9]">
         <LayoutGrid className="h-7 w-7" />
       </FloatingTile>
-      <FloatingTile className="left-[104px] top-[108px] bg-[#0ba8ff]">
+      <FloatingTile className="left-[104px] top-[108px] bg-[#7c3aed]">
         <FileText className="h-7 w-7" />
       </FloatingTile>
-      <FloatingTile className="right-[128px] top-20 bg-[#6536ff]">
+      <FloatingTile className="right-[128px] top-20 bg-[#8b5cf6]">
         <Image className="h-7 w-7" />
       </FloatingTile>
-      <FloatingTile className="right-14 top-[135px] bg-[#6f35ff]">
+      <FloatingTile className="right-14 top-[135px] bg-[#9333ea]">
         <Play className="h-7 w-7" />
       </FloatingTile>
-      <FloatingTile className="right-[74px] top-48 bg-[#132c8c]/70 text-blue-300">
+      <FloatingTile className="right-[74px] top-48 bg-[#3b0764]/70 text-purple-300">
         <UsersRound className="h-7 w-7" />
       </FloatingTile>
 
@@ -99,13 +99,13 @@ function LoginIllustration() {
         <div className="absolute bottom-0 left-2 h-10 w-12 rounded-b-xl rounded-t-sm bg-white shadow-lg" />
       </div>
 
-      <div className="absolute left-[92px] top-58 h-16 border-l border-dashed border-blue-300/30" />
-      <div className="absolute right-[78px] top-76 h-20 border-l border-dashed border-blue-300/30" />
-      <div className="absolute right-[48px] bottom-[115px] h-24 border-l border-blue-300/25">
-        <div className="-ml-1 -mt-1 h-2 w-2 rotate-45 border-l border-t border-blue-300/50" />
+      <div className="absolute left-[92px] top-58 h-16 border-l border-dashed border-purple-300/30" />
+      <div className="absolute right-[78px] top-76 h-20 border-l border-dashed border-purple-300/30" />
+      <div className="absolute right-[48px] bottom-[115px] h-24 border-l border-purple-300/25">
+        <div className="-ml-1 -mt-1 h-2 w-2 rotate-45 border-l border-t border-purple-300/50" />
       </div>
-      <div className="absolute left-[245px] bottom-[138px] h-20 border-l border-blue-300/25">
-        <div className="-ml-1 -mt-1 h-2 w-2 rotate-45 border-l border-t border-blue-300/50" />
+      <div className="absolute left-[245px] bottom-[138px] h-20 border-l border-purple-300/25">
+        <div className="-ml-1 -mt-1 h-2 w-2 rotate-45 border-l border-t border-purple-300/50" />
       </div>
     </div>
   );
@@ -227,11 +227,11 @@ function LoginPage() {
   const isSignUp = mode === "signup";
 
   return (
-    <main className="min-h-screen bg-[#f7f9fd] p-3 text-[#091437] sm:p-4">
-      <section className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-[1380px] overflow-hidden rounded-2xl border border-[#e3e8f3] bg-white shadow-[0_18px_50px_rgba(9,20,55,0.12)] lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[1.03fr_1fr]">
-        <aside className="relative hidden overflow-hidden bg-[#061b62] px-10 py-12 text-white lg:block xl:px-14">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_45%,rgba(14,56,255,0.95),rgba(6,27,98,0.2)_34%,rgba(2,12,46,0)_64%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,#061239_0%,#071c65_52%,#08237a_100%)]" />
+    <main className="min-h-screen bg-[#f5f3ff] p-3 text-[#1e0a3c] sm:p-4">
+      <section className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-[1380px] overflow-hidden rounded-2xl border border-[#e9e3f8] bg-white shadow-[0_18px_50px_rgba(76,29,149,0.12)] lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[1.03fr_1fr]">
+        <aside className="relative hidden overflow-hidden bg-[#2e0069] px-10 py-12 text-white lg:block xl:px-14">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_45%,rgba(124,58,237,0.95),rgba(46,0,105,0.2)_34%,rgba(20,0,50,0)_64%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,#1a0050_0%,#3b0764_52%,#4c1d95_100%)]" />
           <div className="relative z-10">
             <SocialNxtLogo />
             <div className="mt-12 max-w-[390px]">
@@ -241,7 +241,7 @@ function LoginPage() {
               <div className="mt-8 space-y-5">
                 {benefits.map((benefit) => (
                   <div key={benefit} className="flex items-start gap-4">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#1867ff]">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#7c3aed]">
                       <Check className="h-3.5 w-3.5 stroke-[3]" />
                     </span>
                     <p className="max-w-[310px] text-base leading-7 text-white/90">{benefit}</p>
@@ -256,7 +256,7 @@ function LoginPage() {
         <div className="flex items-center justify-center px-6 py-12 sm:px-10 lg:px-14">
           <div className="w-full max-w-[510px]">
             <div className="mb-10 flex justify-center lg:hidden">
-              <div className="rounded-xl bg-[#061b62] px-5 py-3">
+              <div className="rounded-xl bg-[#2e0069] px-5 py-3">
                 <SocialNxtLogo />
               </div>
             </div>
@@ -265,8 +265,8 @@ function LoginPage() {
             {mode === "set_password" ? (
               <>
                 <div className="mb-8 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100">
-                    <KeyRound className="h-7 w-7 text-blue-600" />
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100">
+                    <KeyRound className="h-7 w-7 text-purple-600" />
                   </div>
                   <h2 className="text-2xl font-bold tracking-normal">Set your password</h2>
                   <p className="mt-2 text-sm text-[#6b7a9b]">
@@ -282,7 +282,7 @@ function LoginPage() {
                     <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="new-password" className="text-sm font-semibold text-[#182652]">
+                    <Label htmlFor="new-password" className="text-sm font-semibold text-[#2e1065]">
                       New Password
                     </Label>
                     <div className="relative">
@@ -293,19 +293,19 @@ function LoginPage() {
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Min. 6 characters"
                         required
-                        className="h-[54px] rounded-lg border-[#cfd8e8] bg-white px-4 pr-12 text-base"
+                        className="h-[54px] rounded-lg border-[#d8c9f8] bg-white px-4 pr-12 text-base"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b9ab8] hover:text-[#153dff]"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b9ab8] hover:text-[#7c3aed]"
                       >
                         <Eye className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password" className="text-sm font-semibold text-[#182652]">
+                    <Label htmlFor="confirm-password" className="text-sm font-semibold text-[#2e1065]">
                       Confirm Password
                     </Label>
                     <Input
@@ -315,13 +315,13 @@ function LoginPage() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-enter your password"
                       required
-                      className="h-[54px] rounded-lg border-[#cfd8e8] bg-white px-4 text-base"
+                      className="h-[54px] rounded-lg border-[#d8c9f8] bg-white px-4 text-base"
                     />
                   </div>
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="h-[54px] w-full rounded-lg bg-[#0828ff] text-base font-semibold text-white shadow-[0_12px_25px_rgba(8,40,255,0.25)] hover:bg-[#001bd1]"
+                    className="h-[54px] w-full rounded-lg bg-[#7c3aed] text-base font-semibold text-white shadow-[0_12px_25px_rgba(124,58,237,0.35)] hover:bg-[#6d28d9]"
                   >
                     {isLoading ? "Setting password..." : "Set Password & Enter Workspace"}
                   </Button>
@@ -330,8 +330,8 @@ function LoginPage() {
             ) : mode === "forgot_password" ? (
               <>
                 <div className="mb-8 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100">
-                    <KeyRound className="h-7 w-7 text-blue-600" />
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100">
+                    <KeyRound className="h-7 w-7 text-purple-600" />
                   </div>
                   <h2 className="text-2xl font-bold tracking-normal">Reset your password</h2>
                   <p className="mt-2 text-sm text-[#6b7a9b]">
@@ -358,14 +358,14 @@ function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
                       required
-                      className="h-[54px] w-full rounded-lg border border-[#cfd8e8] bg-white px-4 text-base text-[#091437] placeholder:text-[#9aa8c4] focus:outline-none focus:ring-2 focus:ring-[#153dff]"
+                      className="h-[54px] w-full rounded-lg border border-[#d8c9f8] bg-white px-4 text-base text-[#1e0a3c] placeholder:text-[#9aa8c4] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
                     />
                   </div>
 
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="h-[54px] w-full rounded-lg bg-[#0828ff] text-base font-semibold text-white shadow-[0_12px_25px_rgba(8,40,255,0.25)] hover:bg-[#001bd1] disabled:opacity-70"
+                    className="h-[54px] w-full rounded-lg bg-[#7c3aed] text-base font-semibold text-white shadow-[0_12px_25px_rgba(124,58,237,0.35)] hover:bg-[#6d28d9] disabled:opacity-70"
                   >
                     {isLoading ? "Sending..." : "Send Reset Link"}
                   </Button>
@@ -373,7 +373,7 @@ function LoginPage() {
                   <button
                     type="button"
                     onClick={() => { setMode("signin"); setErrorMsg(""); setSuccessMsg(""); }}
-                    className="w-full text-center text-sm font-semibold text-[#073cff] hover:underline"
+                    className="w-full text-center text-sm font-semibold text-[#7c3aed] hover:underline"
                   >
                     ← Back to Sign In
                   </button>
@@ -388,7 +388,7 @@ function LoginPage() {
                 id="tab-signin"
                 onClick={() => switchMode("signin")}
                 className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
-                  !isSignUp ? "bg-white text-[#091437] shadow-sm" : "text-[#6b7a9b] hover:text-[#091437]"
+                  !isSignUp ? "bg-white text-[#1e0a3c] shadow-sm" : "text-[#6b7a9b] hover:text-[#1e0a3c]"
                 }`}
               >
                 Sign In
@@ -398,7 +398,7 @@ function LoginPage() {
                 id="tab-signup"
                 onClick={() => switchMode("signup")}
                 className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
-                  isSignUp ? "bg-white text-[#091437] shadow-sm" : "text-[#6b7a9b] hover:text-[#091437]"
+                  isSignUp ? "bg-white text-[#1e0a3c] shadow-sm" : "text-[#6b7a9b] hover:text-[#1e0a3c]"
                 }`}
               >
                 Create Account
@@ -424,7 +424,7 @@ function LoginPage() {
 
               {isSignUp && (
                 <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-sm font-semibold text-[#182652]">
+                  <Label htmlFor="fullName" className="text-sm font-semibold text-[#2e1065]">
                     Full Name
                   </Label>
                   <Input
@@ -434,13 +434,13 @@ function LoginPage() {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Ishanshu Sharma"
                     required={isSignUp}
-                    className="h-[54px] rounded-lg border-[#cfd8e8] bg-white px-4 text-base text-[#091437] shadow-none placeholder:text-[#9aa8c4] focus-visible:ring-[#153dff]"
+                    className="h-[54px] rounded-lg border-[#d8c9f8] bg-white px-4 text-base text-[#1e0a3c] shadow-none placeholder:text-[#9aa8c4] focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-semibold text-[#182652]">
+                <Label htmlFor="email" className="text-sm font-semibold text-[#2e1065]">
                   Email address
                 </Label>
                 <Input
@@ -450,12 +450,12 @@ function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
                   required
-                  className="h-[54px] rounded-lg border-[#cfd8e8] bg-white px-4 text-base text-[#091437] shadow-none placeholder:text-[#9aa8c4] focus-visible:ring-[#153dff]"
+                  className="h-[54px] rounded-lg border-[#d8c9f8] bg-white px-4 text-base text-[#1e0a3c] shadow-none placeholder:text-[#9aa8c4] focus-visible:ring-[#7c3aed]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-semibold text-[#182652]">
+                <Label htmlFor="password" className="text-sm font-semibold text-[#2e1065]">
                   Password
                 </Label>
                 <div className="relative">
@@ -466,13 +466,13 @@ function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={isSignUp ? "Min. 6 characters" : "Enter your password"}
                     required
-                    className="h-[54px] rounded-lg border-[#cfd8e8] bg-white px-4 pr-12 text-base text-[#091437] shadow-none placeholder:text-[#9aa8c4] focus-visible:ring-[#153dff]"
+                    className="h-[54px] rounded-lg border-[#d8c9f8] bg-white px-4 pr-12 text-base text-[#1e0a3c] shadow-none placeholder:text-[#9aa8c4] focus-visible:ring-[#7c3aed]"
                   />
                   <button
                     type="button"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-4 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[#8b9ab8] transition-colors hover:text-[#153dff]"
+                    className="absolute right-4 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[#8b9ab8] transition-colors hover:text-[#7c3aed]"
                   >
                     <Eye className="h-5 w-5" />
                   </button>
@@ -481,14 +481,14 @@ function LoginPage() {
 
               {!isSignUp && (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#26355f]">
-                    <Checkbox className="h-4 w-4 rounded-[3px] border-[#153dff] data-[state=checked]:bg-[#153dff]" />
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#3b0764]">
+                    <Checkbox className="h-4 w-4 rounded-[3px] border-[#7c3aed] data-[state=checked]:bg-[#7c3aed]" />
                     Remember me
                   </label>
                   <button
                     type="button"
                     onClick={() => { setMode("forgot_password"); setErrorMsg(""); setSuccessMsg(""); }}
-                    className="text-sm font-semibold text-[#073cff] hover:underline"
+                    className="text-sm font-semibold text-[#7c3aed] hover:underline"
                   >
                     Forgot password?
                   </button>
@@ -498,7 +498,7 @@ function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="h-[54px] w-full rounded-lg bg-[#0828ff] text-base font-semibold text-white shadow-[0_12px_25px_rgba(8,40,255,0.25)] transition-colors hover:bg-[#001bd1] disabled:opacity-70"
+                className="h-[54px] w-full rounded-lg bg-[#7c3aed] text-base font-semibold text-white shadow-[0_12px_25px_rgba(124,58,237,0.35)] transition-colors hover:bg-[#6d28d9] disabled:opacity-70"
               >
                 {isLoading
                   ? isSignUp ? "Creating account..." : "Signing in..."
@@ -506,31 +506,6 @@ function LoginPage() {
               </Button>
             </form>
 
-            <div className="my-7 flex items-center gap-6 text-sm font-medium text-[#26355f]">
-              <span className="h-px flex-1 bg-[#d7deeb]" />
-              <span>or continue with</span>
-              <span className="h-px flex-1 bg-[#d7deeb]" />
-            </div>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGoogleLogin}
-                className="h-[54px] rounded-lg border-[#cfd8e8] bg-white text-base font-semibold text-[#101b3f] shadow-none hover:bg-[#f8faff]"
-              >
-                <GoogleMark />
-                Google
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-[54px] rounded-lg border-[#cfd8e8] bg-white text-base font-semibold text-[#101b3f] shadow-none hover:bg-[#f8faff]"
-              >
-                <MicrosoftMark />
-                Microsoft
-              </Button>
-            </div>
           </>
           )}
           </div>
