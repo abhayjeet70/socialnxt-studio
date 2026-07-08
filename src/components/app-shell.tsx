@@ -385,7 +385,7 @@ export function AppShell({ children, title, subtitle, actions }: {
                     )}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 p-0">
+                <DropdownMenuContent align="center" className="w-80 p-0">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                     <div className="font-semibold text-sm">Notifications</div>
                   </div>
