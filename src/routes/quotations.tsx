@@ -900,7 +900,7 @@ function QuotationPreview({ quotation: q, onClose, embedded }: { quotation: Quot
       )}
 
       {/* Scrollable invoice body */}
-      <div className="overflow-y-auto flex-1">
+      <div className={embedded ? "flex-1" : "overflow-y-auto flex-1"}>
           <div id="q-print" className="p-6 text-sm text-gray-800">
 
             {/* ── Header: Logo + Company Address ── */}
