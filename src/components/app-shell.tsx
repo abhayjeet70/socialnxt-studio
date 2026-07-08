@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Calendar, ListTodo, Users2, Video,
   KanbanSquare, FileText, AlertOctagon, BarChart3, Settings,
-  Search, Bell, ChevronDown, LogOut, Menu, X, Activity, Archive,
+  Search, Bell, ChevronDown, LogOut, Menu, X, Activity, Archive, Receipt,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -41,6 +41,7 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; exact?: bo
   { to: "/meetings", label: "Meetings", icon: Video },
   { to: "/deals", label: "Deals", icon: KanbanSquare },
   { to: "/proposals", label: "Proposals", icon: FileText },
+  { to: "/quotations", label: "Quotations", icon: Receipt },
   { to: "/issues", label: "Client Issues", icon: AlertOctagon },
   { to: "/activity-logs", label: "Activity Logs", icon: Activity },
   { to: "/reports", label: "Reports", icon: BarChart3 },
@@ -63,7 +64,7 @@ function SidebarContent({ workspace, pathname, onNavClick }: {
 }) {
   const visibleNav = NAV.filter(item => {
     if (workspace?.role === "client") {
-      return ["/", "/calendar", "/tasks", "/meetings", "/proposals", "/issues", "/activity-logs"].includes(item.to);
+      return ["/", "/calendar", "/tasks", "/meetings", "/proposals", "/quotations", "/issues", "/activity-logs"].includes(item.to);
     }
     return true;
   });

@@ -216,7 +216,7 @@ function Dashboard() {
     const headers = "ID,Name/Title,Detail,Date\n";
     
     if (selectedMetric === "Connected Accounts") {
-      csv = accounts.map(a => `${a.id},${a.platform},${a.account_name},${a.created_at}`).join("\n");
+      csv = accounts.map(a => `${a.id},${a.platform},${a.account_name}`).join("\n");
     } else {
       let postsToExport: any[] = [];
       if (selectedMetric === "Total Posts") postsToExport = allPosts;
@@ -244,7 +244,7 @@ function Dashboard() {
 
   return (
     <AppShell
-      title={`Good morning, ${workspace?.userEmail?.split("@")[0] ?? "there"}`}
+      title={`Good morning, ${workspace?.workspaceName ?? "there"}`}
       subtitle="Here's what's happening across your agency today."
 
     >

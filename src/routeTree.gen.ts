@@ -13,6 +13,7 @@ import { Route as TeamRouteImport } from './routes/team'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as QuotationsRouteImport } from './routes/quotations'
 import { Route as ProposalsRouteImport } from './routes/proposals'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MeetingsRouteImport } from './routes/meetings'
@@ -43,6 +44,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuotationsRoute = QuotationsRouteImport.update({
+  id: '/quotations',
+  path: '/quotations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProposalsRoute = ProposalsRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/meetings': typeof MeetingsRoute
   '/onboarding': typeof OnboardingRoute
   '/proposals': typeof ProposalsRoute
+  '/quotations': typeof QuotationsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/meetings': typeof MeetingsRoute
   '/onboarding': typeof OnboardingRoute
   '/proposals': typeof ProposalsRoute
+  '/quotations': typeof QuotationsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/meetings': typeof MeetingsRoute
   '/onboarding': typeof OnboardingRoute
   '/proposals': typeof ProposalsRoute
+  '/quotations': typeof QuotationsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/onboarding'
     | '/proposals'
+    | '/quotations'
     | '/reports'
     | '/settings'
     | '/tasks'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/onboarding'
     | '/proposals'
+    | '/quotations'
     | '/reports'
     | '/settings'
     | '/tasks'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/onboarding'
     | '/proposals'
+    | '/quotations'
     | '/reports'
     | '/settings'
     | '/tasks'
@@ -218,6 +230,7 @@ export interface RootRouteChildren {
   MeetingsRoute: typeof MeetingsRoute
   OnboardingRoute: typeof OnboardingRoute
   ProposalsRoute: typeof ProposalsRoute
+  QuotationsRoute: typeof QuotationsRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   TasksRoute: typeof TasksRoute
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quotations': {
+      id: '/quotations'
+      path: '/quotations'
+      fullPath: '/quotations'
+      preLoaderRoute: typeof QuotationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/proposals': {
@@ -346,6 +366,7 @@ const rootRouteChildren: RootRouteChildren = {
   MeetingsRoute: MeetingsRoute,
   OnboardingRoute: OnboardingRoute,
   ProposalsRoute: ProposalsRoute,
+  QuotationsRoute: QuotationsRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   TasksRoute: TasksRoute,

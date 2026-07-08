@@ -749,3 +749,137 @@ export function useDeleteProposal() {
     },
   });
 }
+
+// --------------------------------------------------------
+// QUOTATIONS
+// --------------------------------------------------------
+
+export type LineItem = {
+  description: string;
+  unit: string;
+  qty: number;
+  unit_price: number;
+  discount: number; // percentage 0-100
+  hsn_sac: string;  // HSN/SAC code
+};
+
+export type QuotationExtraFields = {
+  client_gstin?: string;
+  place_of_supply?: string;
+  source?: string;
+  reference_no?: string;
+  upi_id?: string;
+  payment_phone?: string;
+  company_address?: string;
+  company_gstin?: string;
+  company_tagline?: string;
+  company_email?: string;
+  company_website?: string;
+};
+
+export type Quotation = {
+  id: string;
+  workspace_id: string;
+  created_by: string;
+  quotation_number: string;
+  client_name: string;
+  assigned_to: string | null;
+  notify_admin: boolean;
+  service_type: string | null;
+  transaction_type: string | null;
+  issue_date: string | null;
+  valid_until: string | null;
+  line_items: LineItem[];
+  tax_rate: number;
+  notes: string | null;
+  status: "Draft" | "Sent" | "Approved" | "Rejected";
+  extra_fields: QuotationExtraFields;
+  created_at: string;
+  updated_at: string;
+};
+
+export function useQuotations(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: ["quotations", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quotations")
+        .select("*")
+        .eq("workspace_id", workspaceId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Quotation[];
+    },
+  });
+}
+
+export function useCreateQuotation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      quotation: Omit<Quotation, "id" | "quotation_number" | "created_at" | "updated_at"> & {
+        workspace_id: string;
+        created_by: string;
+      }
+    ) => {
+      // Auto-generate quotation number based on count
+      const { count } = await supabase
+        .from("quotations")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", quotation.workspace_id);
+      const num = String((count ?? 0) + 1).padStart(5, "0");
+      const quotation_number = `Q-${num}`;
+
+      const { data, error } = await supabase
+        .from("quotations")
+        .insert({ ...quotation, quotation_number })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Quotation;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["quotations", variables.workspace_id] });
+    },
+  });
+}
+
+export function useUpdateQuotationStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      status,
+      workspace_id,
+    }: {
+      id: string;
+      status: string;
+      workspace_id: string;
+    }) => {
+      const { error } = await supabase
+        .from("quotations")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["quotations", variables.workspace_id] });
+    },
+  });
+}
+
+export function useDeleteQuotation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { error } = await supabase.from("quotations").delete().eq("id", id);
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quotations"] });
+    },
+  });
+}

@@ -215,7 +215,7 @@ function TasksPage() {
     if (sortedPosts.length === 0) return toast.info("No data to export");
     const headers = "Client,Platform,Content Type,Topic,Assigned To,Status,Schedule\n";
     const csv = sortedPosts.map(p => {
-      const assigned = members.filter(m => Array.isArray(p.assigned_to) ? p.assigned_to.includes(m.user_id) : p.assigned_to === m.user_id)
+      const assigned = members.filter(m => Array.isArray(p.assigned_to) && p.assigned_to.includes(m.user_id))
         .map(m => m.users?.full_name || m.users?.email?.split('@')[0] || 'Unknown').join('; ');
       const platforms = p.platform || (p.platforms ? p.platforms.join('; ') : '');
       const schedule = p.scheduled_for ? new Date(p.scheduled_for).toLocaleString() : '';
